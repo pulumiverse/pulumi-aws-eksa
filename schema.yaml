@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/pulumi/pulumi/master/pkg/codegen/schema/pulumi.json
+---
+name: aws-eksa
+resources:
+  aws-eksa:metal:Cluster:
+    isComponent: true
+    inputProperties:
+      clusterName:
+        type: string
+        description: The name of your EKSA Metal Cluster
+      metro:
+        type: string
+        description: The metro to deploy this cluster to
+      projectId:
+        type: string
+        description: The project to deploy this cluster to
+      controlPlaneCount:
+        type: number
+        description: The number of control plane nodes. Set to 3 or 5 for a highly available setup
+        default: 1
+        plain: true
+      controlPlaneDeviceType:
+        type: string
+        description: Device type for the control plane nodes
+        default: c3.small.x86
+      dataPlaneCount:
+        type: number
+        description: The number of data plane nodes
+        default: 1
+        plain: true
+      dataPlaneDeviceType:
+        type: string
+        description: Device type for the data plane nodes
+        default: c3.small.x86
+    requiredInputs:
+      - clusterName
+      - metro
+      - projectId
+    properties:
+      adminIp:
+        type: string
+        description: The IP address of the admin server
+      privateSshKey:
+        type: string
+        description: The private SSH key to connect to the nodes
+    required:
+      - adminIp
+      - privateSshKey
+language:
+  csharp:
+    packageReferences:
+      Pulumi: 3.*
+      Pulumi.EquinixMetal: 3.*
+  go:
+    generateResourceContainerTypes: true
+    importBasePath: github.com/pulumiverse/pulumi-aws-eksa/sdk/go/aws-eksa
+  nodejs:
+    dependencies:
+      "@pulumi/equinix-metal": "^3.2.1"
+    devDependencies:
+      typescript: "^3.7.0"
+  python:
+    requires:
+      pulumi: ">=3.0.0,<4.0.0"
+      pulumi-equinix-metal: ">=3.0.0,<4.0.0"
