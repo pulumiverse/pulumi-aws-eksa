@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env /usr/bin/bash
 set -xe
 
 YQ_VERSION="4.25.3"
@@ -63,7 +63,13 @@ ${PUBLIC_SSH_KEY}
 EOF
 chmod 644 ${HOME}/.ssh/key.pub
 
-CLUSTER_CONFIG_FILE=${CLUSTER_NAME}.yaml
+export TINKERBELL_HOST_IP=${TINK_VIP}
+export CLUSTER_NAME=${CLUSTER_NAME}
+export TINKERBELL_PROVIDER=true
+export CONTROL_PLANE_VIP=${POOL_VIP}
+export CLUSTER_CONFIG_FILE=${CLUSTER_NAME}.yaml
+export PUB_SSH_KEY=\"$(cat /root/.ssh/key.pub)\"
+
 eksctl-anywhere generate clusterconfig ${CLUSTER_NAME} --provider tinkerbell > ${CLUSTER_CONFIG_FILE}
 cp ${CLUSTER_CONFIG_FILE} ${CLUSTER_CONFIG_FILE}.orig
 
@@ -78,4 +84,6 @@ cp ${CLUSTER_CONFIG_FILE} ${CLUSTER_CONFIG_FILE}.orig
 sed -i '0,/HW_TYPE/s//cp/' ${CLUSTER_CONFIG_FILE}
 sed -i '0,/HW_TYPE/s//dp/' ${CLUSTER_CONFIG_FILE}
 
-eksctl-anywhere create cluster --filename ${CLUSTER_CONFIG_FILE} --hardware-csv ${HARDWARE} --tinkerbell-bootstrap-ip ${ADMIN_IP} 2>&1 | tee -a /root/eksa-create-cluster.log
+eksctl-anywhere -v9 create cluster --filename ${CLUSTER_CONFIG_FILE} --hardware-csv ${HARDWARE} --tinkerbell-bootstrap-ip ${ADMIN_IP} 2>&1 > /root/eksa-create-cluster.log
+
+echo "To follow along, tail -f /root/eksa-create-cluster.log"
