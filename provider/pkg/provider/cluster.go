@@ -32,14 +32,14 @@ import (
 
 const ipOffset = 2
 
-//go:embed cloud-config/admin-setup.sh
-var adminUserDataSetup string
-
 //go:embed cloud-config/admin-step-1.sh
 var adminUserData1 string
 
 //go:embed cloud-config/admin-step-2.sh
 var adminUserData2 string
+
+//go:embed cloud-config/admin-step-3.sh
+var adminUserData3 string
 
 type ClusterArgs struct {
 	// Required
@@ -304,16 +304,16 @@ func NewCluster(ctx *pulumi.Context,
 		Base64Encode: pulumi.Bool(false),
 		Parts: &cloudinit.ConfigPartArray{
 			&cloudinit.ConfigPartArgs{
-				ContentType: pulumi.String("text/x-shellscript"),
-				Content:     pulumi.String(adminUserDataSetup),
-			},
-			&cloudinit.ConfigPartArgs{
 				ContentType: pulumi.String("text/cloud-config"),
 				Content:     pulumi.String(adminUserData1),
 			},
 			&cloudinit.ConfigPartArgs{
 				ContentType: pulumi.String("text/x-shellscript"),
 				Content:     pulumi.String(adminUserData2),
+			},
+			&cloudinit.ConfigPartArgs{
+				ContentType: pulumi.String("text/x-shellscript"),
+				Content:     pulumi.String(adminUserData3),
 			},
 		},
 	})
@@ -394,6 +394,9 @@ func NewCluster(ctx *pulumi.Context,
 	if err != nil {
 		return nil, err
 	}
+
+	component.AdminIp = adminIp
+	component.PrivateSshKey = privateKey.PrivateKeyOpenssh
 
 	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"adminIp":       adminIp,
