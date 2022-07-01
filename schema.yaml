@@ -22,7 +22,7 @@ resources:
       controlPlaneDeviceType:
         type: string
         description: Device type for the control plane nodes
-        default: c3.small.x86
+        default: m3.small.x86
       dataPlaneCount:
         type: number
         description: The number of data plane nodes
@@ -31,7 +31,7 @@ resources:
       dataPlaneDeviceType:
         type: string
         description: Device type for the data plane nodes
-        default: c3.small.x86
+        default: m3.small.x86
     requiredInputs:
       - clusterName
       - metro

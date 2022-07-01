@@ -50,9 +50,9 @@ export class Cluster extends pulumi.ComponentResource {
             }
             resourceInputs["clusterName"] = args ? args.clusterName : undefined;
             resourceInputs["controlPlaneCount"] = (args ? args.controlPlaneCount : undefined) ?? 1;
-            resourceInputs["controlPlaneDeviceType"] = (args ? args.controlPlaneDeviceType : undefined) ?? "c3.small.x86";
+            resourceInputs["controlPlaneDeviceType"] = (args ? args.controlPlaneDeviceType : undefined) ?? "m3.small.x86";
             resourceInputs["dataPlaneCount"] = (args ? args.dataPlaneCount : undefined) ?? 1;
-            resourceInputs["dataPlaneDeviceType"] = (args ? args.dataPlaneDeviceType : undefined) ?? "c3.small.x86";
+            resourceInputs["dataPlaneDeviceType"] = (args ? args.dataPlaneDeviceType : undefined) ?? "m3.small.x86";
             resourceInputs["metro"] = args ? args.metro : undefined;
             resourceInputs["projectId"] = args ? args.projectId : undefined;
             resourceInputs["adminIp"] = undefined /*out*/;
