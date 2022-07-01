@@ -36,15 +36,3 @@ write_files:
       vlan-raw-device bond0
   append: true
   path: /etc/network/interfaces
-
-runcmd:
-- snap install go --classic
-- snap install yq
-- export HOME="/root"
-- systemctl restart networking
-- sleep 10
-- mkdir /tmp/eks-anywhere
-- cd /tmp/eks-anywhere
-- git clone https://github.com/aws/eks-anywhere .
-- make eks-a
-- mv bin/eksctl-anywhere /usr/local/bin

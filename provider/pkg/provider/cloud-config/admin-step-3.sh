@@ -6,12 +6,6 @@ YQ_BINARY="yq_linux_amd64"
 curl -fsSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/${YQ_BINARY}
 chmod +x /usr/local/bin/yq
 
-until [ -f /snap/bin/go ]
-do
-    echo "Go not available yet, trying again in 5 seconds"
-    sleep 5
-done
-
 /snap/bin/go install github.com/equinix/metal-cli/cmd/metal@latest
 
 export METAL_AUTH_TOKEN=$(jq -r ".apiKey" /tmp/customdata.json)
