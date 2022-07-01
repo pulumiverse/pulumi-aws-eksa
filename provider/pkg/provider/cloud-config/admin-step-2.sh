@@ -75,7 +75,7 @@ cp ${CLUSTER_CONFIG_FILE} ${CLUSTER_CONFIG_FILE}.orig
 /usr/local/bin/yq e -i "select(.kind == \"TinkerbellMachineConfig\").spec.osFamily |= \"ubuntu\"" ${CLUSTER_CONFIG_FILE}
 /usr/local/bin/yq e -i "select(.kind == \"TinkerbellMachineConfig\").spec.hardwareSelector |= { \"type\": \"HW_TYPE\" }" ${CLUSTER_CONFIG_FILE}
 
-sed -i '0,/^\\([[:blank:]]*\\)type: HW_TYPE.*$/ s//\\1type: cp/' ${CLUSTER_CONFIG_FILE}
-sed -i '0,/^\\([[:blank:]]*\\)type: HW_TYPE.*$/ s//\\1type: dp/' ${CLUSTER_CONFIG_FILE}
+sed -i '0,/HW_TYPE/s//cp/' ${CLUSTER_CONFIG_FILE}
+sed -i '0,/HW_TYPE/s//dp/' ${CLUSTER_CONFIG_FILE}
 
 eksctl-anywhere create cluster --filename ${CLUSTER_CONFIG_FILE} --hardware-csv ${HARDWARE} --tinkerbell-bootstrap-ip ${ADMIN_IP} 2>&1 | tee -a /root/eksa-create-cluster.log

@@ -58,12 +58,8 @@ type ClusterArgs struct {
 type Cluster struct {
 	pulumi.ResourceState
 
-	Vlan            *equinix.Vlan
-	ReservedIpBlock *equinix.ReservedIpBlock
-	Gateway         *equinix.Gateway
-	Devices         []*equinix.Device
-
-	AdminIp pulumi.StringOutput `pulumi:"adminIp"`
+	AdminIp       pulumi.StringOutput `pulumi:"adminIp"`
+	PrivateSshKey pulumi.StringOutput `pulumi:"privateSshKey"`
 }
 
 type AdminCustomData struct {
@@ -116,7 +112,7 @@ func NewCluster(ctx *pulumi.Context,
 		return nil, err
 	}
 
-	component.Vlan, err = equinix.NewVlan(ctx, "vlan", &equinix.VlanArgs{
+	vlan, err := equinix.NewVlan(ctx, "vlan", &equinix.VlanArgs{
 		Metro:     args.Metro,
 		ProjectId: args.ProjectID,
 	}, pulumi.Parent(component))
@@ -125,7 +121,7 @@ func NewCluster(ctx *pulumi.Context,
 		return nil, err
 	}
 
-	component.ReservedIpBlock, err = equinix.NewReservedIpBlock(ctx, "reserved-ip-block", &equinix.ReservedIpBlockArgs{
+	reservedIpBlock, err := equinix.NewReservedIpBlock(ctx, "reserved-ip-block", &equinix.ReservedIpBlockArgs{
 		ProjectId: args.ProjectID,
 		Metro:     args.Metro,
 		Type:      pulumi.String("public_ipv4"),
@@ -137,24 +133,24 @@ func NewCluster(ctx *pulumi.Context,
 		return nil, err
 	}
 
-	component.Gateway, err = equinix.NewGateway(ctx, "gateway", &equinix.GatewayArgs{
+	_, err = equinix.NewGateway(ctx, "gateway", &equinix.GatewayArgs{
 		ProjectId:       args.ProjectID,
-		VlanId:          component.Vlan.ID(),
-		IpReservationId: component.ReservedIpBlock.ID(),
+		VlanId:          vlan.ID(),
+		IpReservationId: reservedIpBlock.ID(),
 	}, pulumi.Parent(component))
 
 	if err != nil {
 		return nil, err
 	}
 
-	adminIp := component.ReservedIpBlock.CidrNotation.ApplyT(func(cidrString string) string {
+	adminIp := reservedIpBlock.CidrNotation.ApplyT(func(cidrString string) string {
 		_, network, _ := net.ParseCIDR(cidrString)
 		ip, _ := cidr.Host(network, ipOffset)
 
 		return ip.String()
 	}).(pulumi.StringOutput)
 
-	poolVip := pulumi.All(component.ReservedIpBlock.CidrNotation, component.ReservedIpBlock.Quantity).ApplyT(func(args []interface{}) string {
+	poolVip := pulumi.All(reservedIpBlock.CidrNotation, reservedIpBlock.Quantity).ApplyT(func(args []interface{}) string {
 		cidrString := args[0].(string)
 		quantity := args[1].(int)
 
@@ -164,7 +160,7 @@ func NewCluster(ctx *pulumi.Context,
 		return ip.String()
 	}).(pulumi.StringOutput)
 
-	tinkVip := pulumi.All(component.ReservedIpBlock.CidrNotation, component.ReservedIpBlock.Quantity).ApplyT(func(args []interface{}) string {
+	tinkVip := pulumi.All(reservedIpBlock.CidrNotation, reservedIpBlock.Quantity).ApplyT(func(args []interface{}) string {
 		cidrString := args[0].(string)
 		quantity := args[1].(int)
 
@@ -174,7 +170,7 @@ func NewCluster(ctx *pulumi.Context,
 		return ip.String()
 	}).(pulumi.StringOutput)
 
-	workerIPs := component.ReservedIpBlock.CidrNotation.ApplyT(func(cidrString string) string {
+	workerIPs := reservedIpBlock.CidrNotation.ApplyT(func(cidrString string) string {
 		totalWorkerCount := args.ControlPlaneCount + args.DataPlaneCount
 		_, network, _ := net.ParseCIDR(cidrString)
 
@@ -207,8 +203,6 @@ func NewCluster(ctx *pulumi.Context,
 			return nil, err
 		}
 
-		component.Devices = append(component.Devices, device)
-
 		networkType, err := equinix.NewDeviceNetworkType(ctx, fmt.Sprintf("control-plane-%d", i), &equinix.DeviceNetworkTypeArgs{
 			DeviceId: device.ID(),
 			Type:     pulumi.String("layer2-individual"),
@@ -220,7 +214,7 @@ func NewCluster(ctx *pulumi.Context,
 
 		_, err = equinix.NewPortVlanAttachment(ctx, fmt.Sprintf("control-plane-%d", i), &equinix.PortVlanAttachmentArgs{
 			DeviceId: device.ID(),
-			VlanVnid: component.Vlan.Vxlan,
+			VlanVnid: vlan.Vxlan,
 			PortName: pulumi.String("eth0"),
 		}, pulumi.DependsOn([]pulumi.Resource{networkType}))
 
@@ -236,7 +230,7 @@ func NewCluster(ctx *pulumi.Context,
 			Metro:           args.Metro,
 			ProjectId:       args.ProjectID,
 			OperatingSystem: pulumi.String("custom_ipxe"),
-			IpxeScriptUrl: component.ReservedIpBlock.CidrNotation.ApplyT(func(cidrString string) string {
+			IpxeScriptUrl: reservedIpBlock.CidrNotation.ApplyT(func(cidrString string) string {
 				_, network, _ := net.ParseCIDR(cidrString)
 				ip, _ := cidr.Host(network, 2)
 
@@ -251,8 +245,6 @@ func NewCluster(ctx *pulumi.Context,
 			return nil, err
 		}
 
-		component.Devices = append(component.Devices, device)
-
 		networkType, err := equinix.NewDeviceNetworkType(ctx, fmt.Sprintf("data-plane-%d", i), &equinix.DeviceNetworkTypeArgs{
 			DeviceId: device.ID(),
 			Type:     pulumi.String("layer2-individual"),
@@ -264,7 +256,7 @@ func NewCluster(ctx *pulumi.Context,
 
 		_, err = equinix.NewPortVlanAttachment(ctx, fmt.Sprintf("data-plane-%d", i), &equinix.PortVlanAttachmentArgs{
 			DeviceId: device.ID(),
-			VlanVnid: component.Vlan.Vxlan,
+			VlanVnid: vlan.Vxlan,
 			PortName: pulumi.String("eth0"),
 		}, pulumi.DependsOn([]pulumi.Resource{networkType}))
 
@@ -339,7 +331,7 @@ func NewCluster(ctx *pulumi.Context,
 		BillingCycle:    pulumi.String("hourly"),
 		Tags:            pulumi.StringArray{pulumi.String("tink-provisioner")},
 		UserData:        config.Rendered,
-		CustomData: pulumi.All(apiKey.Token, clusterUniqueTag.Result, args.ProjectID, component.ReservedIpBlock.CidrNotation, component.ReservedIpBlock.Netmask, component.ReservedIpBlock.Gateway, adminIp, poolVip, tinkVip, workerIPs, privateKey.PublicKeyOpenssh, privateKey.PrivateKeyOpenssh, args.ClusterName).ApplyT(func(vars []interface{}) (string, error) {
+		CustomData: pulumi.All(apiKey.Token, clusterUniqueTag.Result, args.ProjectID, reservedIpBlock.CidrNotation, reservedIpBlock.Netmask, reservedIpBlock.Gateway, adminIp, poolVip, tinkVip, workerIPs, privateKey.PublicKeyOpenssh, privateKey.PrivateKeyOpenssh, args.ClusterName).ApplyT(func(vars []interface{}) (string, error) {
 			token := vars[0].(string)
 			clusterTag := vars[1].(string)
 			projectID := vars[2].(string)
@@ -384,8 +376,6 @@ func NewCluster(ctx *pulumi.Context,
 		return nil, err
 	}
 
-	component.Devices = append(component.Devices, device)
-
 	networkType, err := equinix.NewDeviceNetworkType(ctx, "admin", &equinix.DeviceNetworkTypeArgs{
 		DeviceId: device.ID(),
 		Type:     pulumi.String("hybrid"),
@@ -397,7 +387,7 @@ func NewCluster(ctx *pulumi.Context,
 
 	_, err = equinix.NewPortVlanAttachment(ctx, "admin", &equinix.PortVlanAttachmentArgs{
 		DeviceId: device.ID(),
-		VlanVnid: component.Vlan.Vxlan,
+		VlanVnid: vlan.Vxlan,
 		PortName: pulumi.String("bond0"),
 	}, pulumi.DependsOn([]pulumi.Resource{networkType}))
 
@@ -405,10 +395,8 @@ func NewCluster(ctx *pulumi.Context,
 		return nil, err
 	}
 
-	component.AdminIp = pulumi.Sprintf("1.1.1.1")
-
 	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
-		"adminIp":       component.AdminIp,
+		"adminIp":       adminIp,
 		"privateSshKey": privateKey.PrivateKeyOpenssh,
 	}); err != nil {
 		return nil, err
