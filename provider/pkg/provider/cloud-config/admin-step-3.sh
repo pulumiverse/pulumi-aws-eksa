@@ -1,6 +1,8 @@
 #!/usr/bin/env /usr/bin/bash
 set -xe
 
+export HOME="/root"
+
 YQ_VERSION="4.25.3"
 YQ_BINARY="yq_linux_amd64"
 curl -fsSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/${YQ_BINARY}
